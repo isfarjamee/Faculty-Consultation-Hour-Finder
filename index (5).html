@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BracU CSE — Consultation Hour Finder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --sky: #5BB8F5; --sky-md: #2E90D5; --navy-3: #163F82;
+      --white: #FFFFFF; --muted: #5A7FA8;
+      --border: rgba(91,184,245,0.22); --radius: 16px;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: #061830; color: #fff; min-height: 100vh; }
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 15% 0%, rgba(91,184,245,0.15) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 40% at 90% 100%, rgba(46,144,213,0.12) 0%, transparent 60%),
+        linear-gradient(170deg, #0B2C5E 0%, #061830 100%);
+      pointer-events: none;
+    }
+    .wrap { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 0 20px 80px; }
+    header { padding: 50px 0 30px; text-align: center; }
+    .logo-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 22px; }
+    .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sky); opacity: 0.7; }
+    .logo-text { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--sky); font-weight: 500; }
+    h1 { font-family: 'Syne', sans-serif; font-size: clamp(28px, 5.5vw, 46px); font-weight: 800; line-height: 1.12; letter-spacing: -0.025em; margin-bottom: 10px; }
+    h1 em { color: var(--sky); font-style: normal; }
+    .tagline { font-size: 14px; color: rgba(255,255,255,0.42); font-weight: 300; margin-bottom: 32px; }
+    .search-wrap { position: relative; max-width: 560px; margin: 0 auto; }
+    .search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: rgba(91,184,245,0.55); pointer-events: none; }
+    #searchInput {
+      width: 100%; padding: 16px 48px 16px 52px;
+      font-family: 'DM Sans', sans-serif; font-size: 15px; color: #fff;
+      background: rgba(255,255,255,0.07); border: 1.5px solid var(--border);
+      border-radius: 100px; outline: none;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    #searchInput::placeholder { color: rgba(255,255,255,0.3); }
+    #searchInput:focus { border-color: rgba(91,184,245,0.65); background: rgba(255,255,255,0.09); box-shadow: 0 0 0 4px rgba(91,184,245,0.10); }
+    #clearBtn { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.35); font-size: 22px; line-height: 1; padding: 4px; display: none; transition: color 0.15s; }
+    #clearBtn:hover { color: #fff; }
+    .status { text-align: center; font-size: 13px; color: rgba(255,255,255,0.38); margin: 16px 0 30px; min-height: 22px; }
+    .status.loading { color: var(--sky); }
+    .status.error { color: #F07878; }
+    #results { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; }
+    .fcard { background: rgba(255,255,255,0.055); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; transition: background 0.2s, border-color 0.2s, transform 0.18s; animation: fadeUp 0.28s ease both; }
+    .fcard:hover { background: rgba(255,255,255,0.09); border-color: rgba(91,184,245,0.42); transform: translateY(-2px); }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    .fcard-top { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid rgba(91,184,245,0.12); }
+    .avatar { width: 48px; height: 48px; border-radius: 13px; background: linear-gradient(135deg, var(--sky-md) 0%, var(--navy-3) 100%); display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #fff; letter-spacing: 0.05em; flex-shrink: 0; }
+    .fname { font-family: 'Syne', sans-serif; font-size: 15.5px; font-weight: 700; color: #fff; line-height: 1.2; }
+    .fdesig { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 3px; }
+    .finitials-badge { margin-left: auto; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--sky); background: rgba(91,184,245,0.12); border: 1px solid rgba(91,184,245,0.25); border-radius: 8px; padding: 4px 10px; flex-shrink: 0; }
+    .fcard-rows { display: flex; flex-direction: column; gap: 9px; }
+    .frow { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; }
+    .frow-icon { width: 28px; height: 28px; border-radius: 8px; background: rgba(91,184,245,0.10); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .frow-icon svg { width: 14px; height: 14px; color: var(--sky); }
+    .frow-content { flex: 1; }
+    .frow-label { font-size: 10.5px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+    .frow-val { color: rgba(255,255,255,0.82); line-height: 1.45; }
+    a.frow-val { color: var(--sky); text-decoration: none; }
+    a.frow-val:hover { text-decoration: underline; }
+    .slot { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; color: rgba(255,255,255,0.75); margin-bottom: 3px; }
+    .slot-day { font-size: 10.5px; font-weight: 500; color: var(--sky); width: 76px; flex-shrink: 0; }
+    .empty { grid-column: 1/-1; text-align: center; padding: 64px 20px; color: rgba(255,255,255,0.28); }
+    .empty svg { width: 44px; height: 44px; margin: 0 auto 12px; display: block; }
+    .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(91,184,245,0.25); border-top-color: var(--sky); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 5px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    mark { background: rgba(91,184,245,0.22); color: var(--sky); border-radius: 3px; padding: 0 2px; }
+    footer { text-align: center; margin-top: 56px; font-size: 12px; color: rgba(255,255,255,0.18); }
+    @media (max-width: 500px) { #results { grid-template-columns: 1fr; } h1 { font-size: 28px; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo-row">
+      <div class="logo-dot"></div>
+      <div class="logo-text">BRAC University · CSE Department</div>
+      <div class="logo-dot"></div>
+    </div>
+    <h1>Consultation Hour<br><em>Finder</em></h1>
+    <p class="tagline" id="semLabel">Loading…</p>
+  </header>
+  <div class="search-wrap">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="searchInput" placeholder="e.g. Anika Afrin or AAF…" autocomplete="off" />
+    <button id="clearBtn">×</button>
+  </div>
+  <p class="status" id="status"></p>
+  <div id="results"></div>
+  <footer>Data loaded live from Google Sheets · Updates automatically each semester</footer>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   CONFIG — প্রতি semester এ শুধু এই দুটো বদলাও
+   ═══════════════════════════════════════════════════ */
+const SHEET_ID = "1aZ_8do2w3aA382MhZyJKG5amXZ6fpthJYoLsdM9x0gU";
+const SEMESTER = "Spring 2026";
+/* ═══════════════════════════════════════════════════ */
+
+const DAYS = ["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"];
+
+function csvUrl(sheet) {
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&sheet=${encodeURIComponent(sheet)}`;
+}
+
+function parseCSV(text) {
+  const rows = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const cols = []; let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] === '"') inQ = !inQ;
+      else if (line[i] === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+      else cur += line[i];
+    }
+    cols.push(cur.trim());
+    rows.push(cols);
+  }
+  return rows;
+}
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function hi(text, q) {
+  if (!q || !text) return esc(text||'');
+  return esc(text).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark>$1</mark>');
+}
+
+const IC = {
+  mail:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>`,
+  room:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>`,
+  clock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+};
+
+let allFaculty = [];
+let query = '';
+const slotsCache = {};
+
+const statusEl  = document.getElementById('status');
+const resultsEl = document.getElementById('results');
+const inputEl   = document.getElementById('searchInput');
+const clearBtn  = document.getElementById('clearBtn');
+
+document.getElementById('semLabel').textContent = SEMESTER + ' · Search by name or initials';
+
+function setStatus(html, cls) { statusEl.innerHTML = html; statusEl.className = 'status '+(cls||''); }
+
+async function loadFacultyList() {
+  const res  = await fetch(csvUrl('FacultyList'));
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const rows = parseCSV(await res.text());
+  // find header row
+  let hIdx = 0;
+  for (let i = 0; i < Math.min(rows.length, 5); i++) {
+    const j = rows[i].join(' ').toLowerCase();
+    if (j.includes('initial') || j.includes('name')) { hIdx = i; break; }
+  }
+  const h = rows[hIdx].map(c => c.toLowerCase().trim());
+  const ci = {
+    initial: h.findIndex(c => c.includes('initial')),
+    name:    h.findIndex(c => c === 'name'),
+    desig:   h.findIndex(c => c.includes('design')),
+    room:    h.findIndex(c => c.includes('room') || c.includes('seat')),
+    email:   h.findIndex(c => c.includes('email') || c.includes('mail')),
+  };
+  return rows.slice(hIdx + 1)
+    .filter(r => r[ci.initial] && r[ci.initial].trim())
+    .map(r => ({
+      initial: (r[ci.initial]||'').trim(),
+      name:    (r[ci.name]   ||'').trim(),
+      desig:   (r[ci.desig]  ||'').trim(),
+      room:    (r[ci.room]   ||'').trim(),
+      email:   (r[ci.email]  ||'').trim(),
+      slots: null,
+    }));
+}
+
+async function fetchSlots(initial) {
+  if (slotsCache[initial] !== undefined) return slotsCache[initial];
+  try {
+    const res = await fetch(csvUrl(initial));
+    if (!res.ok) { slotsCache[initial] = []; return []; }
+    const rows = parseCSV(await res.text());
+    // find time-header row
+    let timeRow = -1;
+    for (let i = 0; i < rows.length; i++) {
+      if (/\d+:\d+\s*(AM|PM)/i.test(rows[i].join(' '))) { timeRow = i; break; }
+    }
+    if (timeRow < 0) { slotsCache[initial] = []; return []; }
+    const times = rows[timeRow];
+    const slots = [];
+    for (let i = timeRow + 1; i < rows.length; i++) {
+      const row = rows[i];
+      const dayCell = (row[0]||'').trim();
+      if (!DAYS.includes(dayCell)) continue;
+      const dayTimes = [];
+      for (let c = 1; c < row.length; c++) {
+        if ((row[c]||'').trim().toLowerCase() === 'consultation') {
+          const t = (times[c]||'').trim();
+          if (t) dayTimes.push(t);
+        }
+      }
+      if (dayTimes.length) slots.push({ day: dayCell, times: dayTimes });
+    }
+    slotsCache[initial] = slots;
+    return slots;
+  } catch { slotsCache[initial] = []; return []; }
+}
+
+function cardHtml(f, loading) {
+  const av = esc(f.initial || f.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase());
+  const q  = query;
+  const emailRow = f.email ? `
+    <div class="frow">
+      <div class="frow-icon">${IC.mail}</div>
+      <div class="frow-content">
+        <div class="frow-label">Email</div>
+        <a class="frow-val" href="mailto:${esc(f.email)}">${hi(f.email,q)}</a>
+      </div>
+    </div>` : '';
+  const roomRow = f.room ? `
+    <div class="frow">
+      <div class="frow-icon">${IC.room}</div>
+      <div class="frow-content">
+        <div class="frow-label">Room / Seat</div>
+        <div class="frow-val">${hi(f.room,q)}</div>
+      </div>
+    </div>` : '';
+  let consultHtml = '';
+  if (loading) {
+    consultHtml = `<div class="frow">
+      <div class="frow-icon">${IC.clock}</div>
+      <div class="frow-content">
+        <div class="frow-label">Consultation Hours</div>
+        <div class="frow-val" style="color:rgba(255,255,255,0.3);font-size:12px"><span class="spinner"></span>Loading…</div>
+      </div></div>`;
+  } else if (f.slots && f.slots.length) {
+    const slotsHtml = f.slots.map(s =>
+      `<div class="slot"><span class="slot-day">${esc(s.day)}</span><span>${esc(s.times.join(' · '))}</span></div>`
+    ).join('');
+    consultHtml = `<div class="frow">
+      <div class="frow-icon">${IC.clock}</div>
+      <div class="frow-content">
+        <div class="frow-label">Consultation Hours</div>
+        <div class="frow-val">${slotsHtml}</div>
+      </div></div>`;
+  } else if (f.slots && f.slots.length === 0) {
+    consultHtml = `<div class="frow">
+      <div class="frow-icon">${IC.clock}</div>
+      <div class="frow-content">
+        <div class="frow-label">Consultation Hours</div>
+        <div class="frow-val" style="color:rgba(255,255,255,0.3);font-size:12px">Not scheduled</div>
+      </div></div>`;
+  }
+  return `<div class="fcard" id="card-${esc(f.initial)}">
+    <div class="fcard-top">
+      <div class="avatar">${av}</div>
+      <div style="flex:1">
+        <div class="fname">${hi(f.name,q)}</div>
+        ${f.desig ? `<div class="fdesig">${esc(f.desig)}</div>` : ''}
+      </div>
+      <div class="finitials-badge">${hi(f.initial,q)}</div>
+    </div>
+    <div class="fcard-rows">${emailRow}${roomRow}${consultHtml}</div>
+  </div>`;
+}
+
+function matches(f, q) {
+  const s = q.toLowerCase();
+  return f.name.toLowerCase().includes(s) || f.initial.toLowerCase().includes(s);
+}
+
+function render() {
+  const list = query ? allFaculty.filter(f => matches(f, query)) : allFaculty;
+  if (!allFaculty.length) { resultsEl.innerHTML = ''; return; }
+  if (!list.length) {
+    resultsEl.innerHTML = `<div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <p style="font-size:15px">No faculty found for "<strong>${esc(query)}</strong>"</p>
+    </div>`;
+    return;
+  }
+  resultsEl.innerHTML = list.map(f => cardHtml(f, f.slots === null)).join('');
+  // load slots async for visible cards
+  (async () => {
+    for (const f of list) {
+      if (f.slots !== null) continue;
+      const slots = await fetchSlots(f.initial);
+      f.slots = slots;
+      const card = document.getElementById('card-' + f.initial);
+      if (card) card.outerHTML = cardHtml(f, false);
+    }
+  })();
+}
+
+inputEl.addEventListener('input', () => {
+  query = inputEl.value.trim();
+  clearBtn.style.display = query ? 'block' : 'none';
+  render();
+});
+clearBtn.addEventListener('click', () => {
+  inputEl.value = query = '';
+  clearBtn.style.display = 'none';
+  inputEl.focus();
+  render();
+});
+
+(async () => {
+  setStatus('<span class="spinner"></span>Loading faculty list…', 'loading');
+  try {
+    allFaculty = await loadFacultyList();
+    setStatus(allFaculty.length + ' faculty loaded · type a name or initials to search', '');
+    render();
+  } catch (e) {
+    setStatus('Could not load data. Make sure the sheet is shared as "Anyone with the link can view". Error: ' + e.message, 'error');
+  }
+})();
+</script>
+</body>
+</html>
